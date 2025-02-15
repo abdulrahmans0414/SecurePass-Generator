@@ -1,5 +1,63 @@
+import { useRef, useState, useCallback, useEffect } from 'react';
 
 function App() {
+
+  const [length, setLength] = useState(8);
+  const [numberAllowed, setNumberAllowed] = useState(true); // Enabled by default
+  const [charAllowed, setCharAllowed] = useState(true); // Enabled by default
+  const [password, setPassword] = useState('');
+  const passwordRef = useRef(null);
+
+  // Password generation logic
+  const passwordGenerator = useCallback(() => {
+    let pass = '';
+    let str = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+    if (numberAllowed) str += '0123456789';
+    if (charAllowed) str += '!@#$%^&*()_+{}[]~`';
+
+    for (let i = 1; i <= length; i++) {
+      const char = Math.floor(Math.random() * str.length);
+      pass += str.charAt(char);
+    }
+
+    setPassword(pass);
+  }, [length, numberAllowed, charAllowed, setPassword]);
+
+  // Copy password to clipboard
+  const copyPasswordToClipboard = useCallback(() => {
+    passwordRef.current?.select();
+    passwordRef.current?.setSelectionRange(0, 99); // Select all characters
+    navigator.clipboard.writeText(password);
+    // alert('Password copied to clipboard!');
+  }, [password]);
+
+  // Generate password on component mount and when dependencies change
+  useEffect(() => {
+    passwordGenerator();
+  }, [length, numberAllowed, charAllowed, passwordGenerator]);
+
+  // Calculate password strength
+  const calculatePasswordStrength = () => {
+    let strength = 0;
+
+    // Length check
+    if (length >= 12) strength += 2;
+    else if (length >= 8) strength += 1;
+
+    // Uppercase check
+    if (/[A-Z]/.test(password)) strength += 1;
+
+    // Number check
+    if (numberAllowed && /[0-9]/.test(password)) strength += 1;
+
+    // Special character check
+    if (charAllowed && /[!@#$%^&*()_+{}[\]~`]/.test(password)) strength += 1;
+
+    // Determine strength level
+    if (strength >= 5) return 'Strong';
+    if (strength >= 3) return 'Medium';
+    return 'Weak';
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gray-900 overflow-hidden">
@@ -21,14 +79,15 @@ function App() {
         <div className="group relative">
           <input
             type="text"
-
+            value={password}
             className="w-full px-6 py-4 text-xl rounded-lg bg-gray-700/50 border-2 border-gray-600/50 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 outline-none transition-all pr-24 font-mono text-gray-100 placeholder-gray-400"
             placeholder="Your secure password..."
             readOnly
+            ref={passwordRef}
 
           />
           <button
-
+            onClick={copyPasswordToClipboard}
             className="absolute right-2 top-2 px-6 py-2.5 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-semibold rounded-md transition-all duration-200 transform hover:scale-105 active:scale-95 shadow-lg"
           >
             Copy
@@ -40,13 +99,15 @@ function App() {
           {/* Length Slider */}
           <div className="space-y-4">
             <label className="flex items-center justify-between text-gray-300 font-medium">
-              Length: <span className="text-blue-400 font-bold"></span>
+              Length: <span className="text-blue-400 font-bold">{length}</span>
             </label>
             <input
               type="range"
+
               min={6}
               max={32}
-
+              value={length}
+              onChange={(e) => setLength(e.target.value)}
               className="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer range-lg accent-blue-500"
             />
           </div>
@@ -56,7 +117,8 @@ function App() {
             <div className="relative flex items-center">
               <input
                 type="checkbox"
-
+                checked={numberAllowed}
+                onChange={() => setNumberAllowed((prev) => !prev)}
                 className="w-5 h-5 appearance-none border-2 border-gray-400 rounded-md checked:bg-blue-500 checked:border-blue-500 transition-all cursor-pointer"
               />
               <svg
@@ -74,7 +136,8 @@ function App() {
             <div className="relative flex items-center">
               <input
                 type="checkbox"
-
+                checked={charAllowed}
+                onChange={() => setCharAllowed((prev) => !prev)}
                 className="w-5 h-5 appearance-none border-2 border-gray-400 rounded-md checked:bg-purple-500 checked:border-purple-500 transition-all cursor-pointer"
               />
               <svg
@@ -93,7 +156,7 @@ function App() {
           <p className="text-gray-400 text-sm">
             Password Strength:
             <span className="font-bold text-blue-400 ml-2">
-              Strong
+              {calculatePasswordStrength()}
             </span>
           </p>
         </div>
